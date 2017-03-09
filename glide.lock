@@ -1,0 +1,50 @@
+hash: e8eb1e9452c2a28edf8376414455d931ec870e64ff70cc82a0ea162ff506026d
+updated: 2017-03-08T23:53:04.668424119-06:00
+imports:
+- name: github.com/daaku/go.zipexe
+  version: a5fe2436ffcb3236e175e5149162b41cd28bd27d
+- name: github.com/GeertJohan/go.rice
+  version: 4bbccbfa39e784796e483270451217d3369ecfbe
+  subpackages:
+  - embedded
+- name: github.com/golang/protobuf
+  version: c9c7427a2a70d2eb3bafa0ab2dc163e45f143317
+  subpackages:
+  - proto
+  - protoc-gen-go
+- name: github.com/kardianos/osext
+  version: 9b883c5eb462dd5cb1b0a7a104fe86bc6b9bd391
+- name: github.com/onsi/gomega
+  version: 1de7ab2df9105aa5c15c4d7e14a8a514e3cb8d4b
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/uber-go/atomic
+  version: 9e99152552a6ce13fa3b2ce4a9c4fb117cca4506
+- name: github.com/uber-go/zap
+  version: 42d1b1f7df21aa5bca6bf1a017525c66e38c3250
+- name: golang.org/x/net
+  version: a6577fac2d73be281a500b310739095313165611
+  subpackages:
+  - context
+  - websocket
+  - http2
+  - trace
+  - http2/hpack
+  - idna
+  - lex/httplex
+  - internal/timeseries
+- name: google.golang.org/grpc
+  version: 4eaacfed9779ee7568c9e72e9f763dbd3af8e0b4
+  subpackages:
+  - credentials
+  - grpclog
+  - codes
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - tap
+  - transport
+devImports: []

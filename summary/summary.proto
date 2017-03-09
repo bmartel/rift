@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+service Summary {
+  rpc UpdateStats(Stats) returns (Stats){}
+}
+
+message Stats {
+  string queue_id = 1;
+  repeated string workers = 2;
+
+  uint32 active_jobs = 3;
+  uint32 queued_jobs = 4;
+  uint32 processed_jobs = 5;
+  uint32 deferred_jobs = 6;
+  uint32 failed_jobs = 7;
+  uint32 requeued_jobs = 8;
+}
