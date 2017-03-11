@@ -1,33 +1,34 @@
 package rift
 
-import (
-	"time"
-)
+import "github.com/bmartel/rift/summary"
 
-type Stats struct {
-	QueueID string   `json:"queue_id"`
-	Workers []string `json:"workers"`
+func updateJob(s *summary.Stats, job *summary.Job) {
+	s.Jobs[job.Id] = job
 
-	ActiveJobs    uint8  `json:"active_jobs"`
-	QueuedJobs    uint32 `json:"queued_jobs"`
-	ProcessedJobs uint32 `json:"processed_jobs"`
-	DeferredJobs  uint32 `json:"deferred_jobs"`
-	FailedJobs    uint32 `json:"failed_jobs"`
-	RequeuedJobs  uint32 `json:"requeued_jobs"`
-
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type Metric interface {
-	Type() string
-	Value() interface{}
-}
-
-type QueueMetric string
-
-func (m QueueMetric) Type() string {
-	return string(m)
-}
-func (m QueueMetric) Value() interface{} {
-	return 1
+	switch job.Status {
+	case "job.queued":
+		s.QueuedJobs++
+	case "job.started":
+		s.ActiveJobs++
+	case "job.processed":
+		if s.ActiveJobs > 0 {
+			s.ActiveJobs--
+		}
+		s.ProcessedJobs++
+	case "job.failed":
+		if s.ActiveJobs > 0 {
+			s.ActiveJobs--
+		}
+		s.FailedJobs++
+	case "job.deferred":
+		if s.ActiveJobs > 0 {
+			s.ActiveJobs--
+		}
+		s.DeferredJobs++
+	case "job.requeued":
+		if s.ActiveJobs > 0 {
+			s.ActiveJobs--
+		}
+		s.RequeuedJobs++
+	}
 }

@@ -17,12 +17,20 @@ var connectionRetry int = 0
 type SampleJob struct {
 }
 
+func (t SampleJob) Tag() string {
+	return "Sample Job"
+}
+
 func (t SampleJob) Process(service rift.Service) error {
 	log.Println("Hello World!")
 	return nil
 }
 
 type FailedJob struct {
+}
+
+func (t FailedJob) Tag() string {
+	return "Failing Job"
 }
 
 func (t FailedJob) Process(service rift.Service) error {
@@ -42,7 +50,7 @@ var _ = Describe("Queue", func() {
 		connectionRetry = 0
 
 		log.Println(runtime.NumGoroutine())
-		queue = rift.New(&rift.Options{nil, 10, 10, false})
+		queue = rift.New(&rift.Options{"Test", nil, 10, 10, false, "localhost:9147"})
 	})
 	AfterEach(func() {
 		queue.Close()

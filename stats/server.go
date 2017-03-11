@@ -27,14 +27,15 @@ var (
 )
 
 type statsServer struct {
-	stream chan summary.Stats
+	stream chan *summary.Stats
 }
 
-func (s *statsServer) UpdateStats(context.Context, *summary.Stats) (*summary.Stats, error) {
-	return nil, nil
+func (s *statsServer) UpdateStats(ctx context.Context, stats *summary.Stats) (*summary.Stats, error) {
+	s.stream <- stats
+	return stats, nil
 }
 
-func setupStatsServer(stream chan summary.Stats) {
+func setupStatsServer(stream chan *summary.Stats) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		grpclog.Fatalf("failed to listen: %v", err)
@@ -55,7 +56,7 @@ func setupStatsServer(stream chan summary.Stats) {
 	grpcServer.Serve(lis)
 }
 
-func socket(stream chan summary.Stats) func(*websocket.Conn) {
+func socket(stream chan *summary.Stats) func(*websocket.Conn) {
 	return func(ws *websocket.Conn) {
 		for {
 			select {
@@ -98,7 +99,7 @@ func main() {
 	flag.Parse()
 	indexTmpl := loadTemplate()
 
-	stream := make(chan summary.Stats)
+	stream := make(chan *summary.Stats)
 	go setupStatsServer(stream)
 
 	http.HandleFunc("/", serveTemplate(indexTmpl))

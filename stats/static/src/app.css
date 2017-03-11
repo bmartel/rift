@@ -1,6 +1,7 @@
 @import "./styles/variables.css";
 
+@import "bootstrap/dist/css/bootstrap.css";
+
 body {
   font-family: var(--fontFamily);
-  color: var(--fontColor);
 }

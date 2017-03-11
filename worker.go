@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/bmartel/rift/summary"
 	"github.com/satori/go.uuid"
 	"github.com/uber-go/zap"
 )
@@ -13,10 +14,12 @@ var (
 	maxQueue  = os.Getenv("MAX_QUEUE")
 )
 
+// Service represents application specific dependencies that need to be passed to a job
 type Service interface{}
 
 // Job is the base required interface for queueing new work
 type Job interface {
+	Tag() string
 	Process(Service) error
 }
 
@@ -41,12 +44,12 @@ type Worker struct {
 
 	service Service
 
-	metric  chan Metric
+	metric  chan *summary.Job
 	logger  zap.Logger
 	verbose bool
 }
 
-func dispatchWorker(service Service, register chan *Worker, requeue chan ReservedJob, reserve chan *Worker, metric chan Metric, queueSize int, logger zap.Logger, verbose bool) uuid.UUID {
+func dispatchWorker(service Service, register chan *Worker, requeue chan ReservedJob, reserve chan *Worker, metric chan *summary.Job, queueSize int, logger zap.Logger, verbose bool) uuid.UUID {
 	id := uuid.NewV4()
 	w := &Worker{
 		ID:       id,
@@ -65,7 +68,7 @@ func dispatchWorker(service Service, register chan *Worker, requeue chan Reserve
 	return id
 }
 
-// Start method starts the run loop for the worker, listening for a quit channel in
+// Open method starts the run loop for the worker, listening for a quit channel in
 // case we need to stop
 func (w *Worker) Open() {
 	if w.verbose {
@@ -78,21 +81,21 @@ func (w *Worker) Open() {
 	for {
 		select {
 		case job := <-w.channel:
-			w.metric <- QueueMetric("job.started")
+			w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.started", Worker: w.ID.String()}
 			w.logger.Info("job started", zap.String("job", job.ID.String()))
 			// we have received a work request.
 			if err := job.Job.Process(w.service); err != nil {
-				w.metric <- QueueMetric("job.failed")
+				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.failed", Worker: w.ID.String()}
 				w.logger.Error("job failed: "+err.Error(), zap.String("job", job.ID.String()))
 				if job.Retry > job.Requeued {
-					w.metric <- QueueMetric("job.requeued")
+					w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.requeued", Worker: w.ID.String()}
 					w.logger.Info("job requeued", zap.String("job", job.ID.String()))
 					// requeue the job
 					job.Requeued++
 					w.requeue <- job
 				}
 			} else {
-				w.metric <- QueueMetric("job.processed")
+				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.processed", Worker: w.ID.String()}
 				w.logger.Info("job processed", zap.String("job", job.ID.String()), zap.Float64("duration", time.Since(job.RequestedAt).Seconds()))
 				// Put the worker back into the queue reserve for another job to use
 				w.reserve <- w
