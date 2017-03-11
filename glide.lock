@@ -1,8 +1,10 @@
-hash: e8eb1e9452c2a28edf8376414455d931ec870e64ff70cc82a0ea162ff506026d
-updated: 2017-03-08T23:53:04.668424119-06:00
+hash: dc8bbf0030d18aece35242a3170a031f3b2e2741b7d4b46bdd6253b526d7052a
+updated: 2017-03-11T14:14:39.091310619-06:00
 imports:
 - name: github.com/daaku/go.zipexe
   version: a5fe2436ffcb3236e175e5149162b41cd28bd27d
+- name: github.com/fatih/structs
+  version: a720dfa8df582c51dee1b36feabb906bde1588bd
 - name: github.com/GeertJohan/go.rice
   version: 4bbccbfa39e784796e483270451217d3369ecfbe
   subpackages:

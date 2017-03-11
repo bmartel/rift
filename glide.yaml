@@ -16,3 +16,4 @@ import:
 - package: github.com/GeertJohan/go.rice
   subpackages:
   - embedded
+- package: github.com/fatih/structs

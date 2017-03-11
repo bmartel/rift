@@ -15,6 +15,9 @@ import (
 var connectionRetry int = 0
 
 type SampleJob struct {
+	ID    int
+	Title string
+	Body  string
 }
 
 func (t SampleJob) Tag() string {
@@ -22,7 +25,7 @@ func (t SampleJob) Tag() string {
 }
 
 func (t SampleJob) Process(service rift.Service) error {
-	log.Println("Hello World!")
+	log.Printf("ID: %d Title: %s Body: %s\n", t.ID, t.Title, t.Body)
 	return nil
 }
 
@@ -59,7 +62,7 @@ var _ = Describe("Queue", func() {
 
 	Describe("Queueing a job", func() {
 		It("should correctly queue and process a single job", func(done Done) {
-			queue.Later(SampleJob{}, 0)
+			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 
 			time.Sleep(time.Second * 1)
 
@@ -71,8 +74,8 @@ var _ = Describe("Queue", func() {
 		}, 3)
 
 		It("should correctly queue and process multiple jobs", func(done Done) {
-			queue.Later(SampleJob{}, 0)
-			queue.Later(SampleJob{}, 0)
+			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 
 			time.Sleep(time.Second * 1)
 
