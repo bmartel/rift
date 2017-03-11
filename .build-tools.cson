@@ -1,0 +1,32 @@
+providers: [
+  {
+    key: "bt"
+    config:
+      commands: [
+        {
+          project: "/Users/brandonmartel/code/go/src/github.com/bmartel/rift"
+          source: "/Users/brandonmartel/code/go/src/github.com/bmartel/rift/.build-tools.cson"
+          name: "Build Stats"
+          command: "make build"
+          wd: "./stats"
+          env: {}
+          modifier: {}
+          environment:
+            name: "child_process"
+            config:
+              stdoe: "both"
+          stdout:
+            pipeline: []
+          stderr:
+            pipeline: []
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              colors: true
+              stdin: false
+          version: 2
+        }
+      ]
+  }
+]
