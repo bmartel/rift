@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bmartel/rift"
+	"github.com/bmartel/rift/summary"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,10 +22,21 @@ type SampleJob struct {
 }
 
 func (t SampleJob) Tag() string {
-	return "Sample Job"
+	return "SampleJob"
+}
+
+func (t SampleJob) Build(jobType string, data map[string]interface{}) rift.Job {
+	return SampleJob{
+		ID:    data["id"].(int),
+		Title: data["title"].(string),
+		Body:  data["body"].(string),
+	}
 }
 
 func (t SampleJob) Process(service rift.Service) error {
+	if t.ID == 0 || t.Title == "" || t.Body == "" {
+		return fmt.Errorf("missing data members")
+	}
 	log.Printf("ID: %d Title: %s Body: %s\n", t.ID, t.Title, t.Body)
 	return nil
 }
@@ -33,7 +45,11 @@ type FailedJob struct {
 }
 
 func (t FailedJob) Tag() string {
-	return "Failing Job"
+	return "FailedJob"
+}
+
+func (t FailedJob) Build(jobType string, data map[string]interface{}) rift.Job {
+	return FailedJob{}
 }
 
 func (t FailedJob) Process(service rift.Service) error {
@@ -128,5 +144,49 @@ var _ = Describe("Queue", func() {
 
 			close(done)
 		}, 3)
+
+		It("should capture a queued jobs details and correctly produce a new job through serialization", func(done Done) {
+			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+
+			id, err := queue.CreateJob("SampleJob", map[string]interface{}{
+				"id":    2,
+				"title": "Queued indirectly through serialization",
+				"body":  "This job could have come from anywhere",
+			}, 0)
+
+			Expect(id).ToNot(Equal(""))
+			Expect(err).To(BeNil())
+
+			time.Sleep(time.Second * 1)
+
+			stats := queue.Stats()
+			Expect(stats.QueuedJobs).To(Equal(uint32(2)))
+			Expect(stats.ProcessedJobs).To(Equal(uint32(2)))
+			Expect(stats.FailedJobs).To(Equal(uint32(0)))
+
+			close(done)
+		}, 3)
+
+		It("should capture a queued jobs details and make them available for external sources to consume", func(done Done) {
+			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+
+			time.Sleep(time.Second * 1)
+
+			expected := []*summary.JobBlueprint{
+				&summary.JobBlueprint{
+					JobName: "SampleJob",
+					Fields: map[string]string{
+						"id":    "int",
+						"title": "string",
+						"body":  "string",
+					},
+				},
+			}
+			stats := queue.Stats()
+			Expect(stats.JobBlueprints).To(Equal(expected))
+
+			close(done)
+		}, 3)
+
 	})
 })

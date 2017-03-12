@@ -2,6 +2,7 @@ package rift
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -38,6 +39,9 @@ type Queue struct {
 	// logging
 	logger  zap.Logger
 	verbose bool
+
+	// serialization
+	registry *Registry
 
 	// monitoring
 	statsAddr  string
@@ -95,6 +99,7 @@ func New(opts *Options) *Queue {
 		removedMetric:   make(chan bool),
 		metric:          make(chan *summary.Job),
 		stats:           new(summary.Stats),
+		registry:        NewRegistry(),
 		statsAddr:       opts.StatsAddr,
 		logger:          zap.New(zap.NewJSONEncoder(), zap.Fields(zap.String("queue", id.String()))),
 		verbose:         opts.Verbose,
@@ -104,6 +109,7 @@ func New(opts *Options) *Queue {
 	q.stats.App = opts.Tag
 	q.stats.QueueId = q.id
 	q.stats.Jobs = make(map[string]*summary.Job, 0)
+	q.stats.JobBlueprints = make([]*summary.JobBlueprint, 0)
 
 	if opts.Verbose {
 		q.logger.Info("queue started")
@@ -158,7 +164,22 @@ func (q *Queue) Later(job Job, retry uint8) uuid.UUID {
 
 	q.metric <- &summary.Job{Id: id.String(), Status: "job.queued", Worker: q.id}
 
+	// Capture the job imprint for serialization
+	q.registry.EncodeSerializer(job, q.stats)
+
 	return id
+}
+
+// Register a job type for future serialization
+func (q *Queue) CreateJob(jobType string, data map[string]interface{}, retry uint8) (string, error) {
+	job := q.registry.DecodeJob(jobType, data)
+	if job == nil {
+		return "", fmt.Errorf("no job serializer could be found for %s", jobType)
+	}
+
+	id := q.Later(job, retry)
+
+	return id.String(), nil
 }
 
 // Close the queue, first draining any open workers and jobs in queue

@@ -20,6 +20,7 @@ type Service interface{}
 // Job is the base required interface for queueing new work
 type Job interface {
 	Tag() string
+	Build(jobType string, data map[string]interface{}) Job
 	Process(Service) error
 }
 
