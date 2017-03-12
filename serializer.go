@@ -12,6 +12,7 @@ type Serializer struct {
 	Job Job `json:"-"`
 }
 
+// NewRegistry creates a registry to store serializers
 func NewRegistry() *Registry {
 	return &Registry{
 		serializers: make(map[string]*Serializer, 0),
@@ -23,6 +24,8 @@ type Registry struct {
 	serializers map[string]*Serializer
 }
 
+// EncodeSerializer deconstructs a job into a serializer and also registers a
+// blueprint with the stats service
 func (r *Registry) EncodeSerializer(job Job, stats *summary.Stats) {
 
 	// Check if it already exists
@@ -55,7 +58,7 @@ func (r *Registry) DecodeJob(jobType string, data map[string]interface{}) Job {
 
 	// lookup the incoming job type
 	if serializer, ok := r.serializers[jobType]; ok {
-		return serializer.Job.Build(jobType, data)
+		return serializer.Job.Build(data)
 	}
 
 	return nil

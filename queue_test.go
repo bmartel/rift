@@ -25,7 +25,7 @@ func (t SampleJob) Tag() string {
 	return "SampleJob"
 }
 
-func (t SampleJob) Build(jobType string, data map[string]interface{}) rift.Job {
+func (t SampleJob) Build(data map[string]interface{}) rift.Job {
 	return SampleJob{
 		ID:    data["id"].(int),
 		Title: data["title"].(string),
@@ -48,7 +48,7 @@ func (t FailedJob) Tag() string {
 	return "FailedJob"
 }
 
-func (t FailedJob) Build(jobType string, data map[string]interface{}) rift.Job {
+func (t FailedJob) Build(data map[string]interface{}) rift.Job {
 	return FailedJob{}
 }
 

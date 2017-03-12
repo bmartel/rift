@@ -1,5 +1,5 @@
-hash: dc8bbf0030d18aece35242a3170a031f3b2e2741b7d4b46bdd6253b526d7052a
-updated: 2017-03-11T14:14:39.091310619-06:00
+hash: 089f72ceda6b73f299b71741a16fb5b5883de3452695f039e3e3bc00117ca128
+updated: 2017-03-11T23:02:29.020243202-06:00
 imports:
 - name: github.com/daaku/go.zipexe
   version: a5fe2436ffcb3236e175e5149162b41cd28bd27d
@@ -20,10 +20,6 @@ imports:
   version: 1de7ab2df9105aa5c15c4d7e14a8a514e3cb8d4b
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
-- name: github.com/uber-go/atomic
-  version: 9e99152552a6ce13fa3b2ce4a9c4fb117cca4506
-- name: github.com/uber-go/zap
-  version: 42d1b1f7df21aa5bca6bf1a017525c66e38c3250
 - name: golang.org/x/net
   version: a6577fac2d73be281a500b310739095313165611
   subpackages:

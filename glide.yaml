@@ -2,7 +2,7 @@ package: github.com/bmartel/rift
 import:
 - package: github.com/satori/go.uuid
   version: ^1.1.0
-- package: github.com/uber-go/zap
+# - package: github.com/uber-go/zap
 - package: github.com/onsi/gomega
 - package: google.golang.org/grpc
 - package: github.com/golang/protobuf
