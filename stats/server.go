@@ -65,17 +65,22 @@ func setupStatsServer(statsStream chan *summary.Stats, jobStream chan *summary.J
 
 func socket(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate) func(*websocket.Conn) {
 	return func(ws *websocket.Conn) {
+		defer func(socketConn *websocket.Conn) {
+			socketConn.Close()
+			log.Println("Closing socket connection")
+		}(ws)
+
 		for {
 			select {
 			case data := <-statsStream:
 				if err := websocket.JSON.Send(ws, data); err != nil {
-					log.Println(err)
-					break
+					log.Printf("Socket Error: %v\n", err)
+					return
 				}
 			case data := <-jobStream:
 				if err := websocket.JSON.Send(ws, data); err != nil {
-					log.Println(err)
-					break
+					log.Printf("Socket Error: %v\n", err)
+					return
 				}
 			}
 		}

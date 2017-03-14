@@ -27,16 +27,16 @@ const Dashboard = {
           m('thead.thead-default',
             m('tr', [
               m('th', 'Job ID'),
+              m('th', 'Queue'),
               m('th', 'Job Tag'),
-              m('th', 'Worker'),
               m('th', 'Status'),
             ]),
           ),
           m('tbody',
             map(app.jobs, job => m('tr', { key: job.id }, [
               m('td', job.id),
+              m('td', job.queue_id),
               m('td', job.tag),
-              m('td', job.worker),
               m('td', job.status),
             ])),
           ),

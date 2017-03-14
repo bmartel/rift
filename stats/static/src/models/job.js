@@ -52,6 +52,8 @@ export class Job {
     const apps = this.apps()[stats.app] || {};
     const totals = Job.initialAppTotals(apps.totals);
     const jobs = apps.jobs || {};
+    const job = stats.job;
+    job.queue_id = stats.queue_id;
 
     return {
       totals: {
@@ -60,7 +62,7 @@ export class Job {
       },
       jobs: {
         ...jobs,
-        [stats.job.id]: stats.job,
+        [job.id]: job,
       },
     };
   }
