@@ -1,7 +1,7 @@
 import m from 'mithril';
 import prop from 'mithril/stream';
 
-export class Stats {
+export class Job {
   constructor() {
     this.apps = prop({});
     this.error = prop('');
@@ -45,15 +45,11 @@ export class Stats {
     return {
       totals: {
         ...totals,
-        active_jobs: stats.active_jobs || 0,
-        queued_jobs: (totals.queued_jobs || 0) + (stats.queued_jobs ? 1 : 0),
-        requeued_jobs: (totals.requeued_jobs || 0) + (stats.requeued_jobs ? 1 : 0),
-        failed_jobs: (totals.failed_jobs || 0) + (stats.failed_jobs ? 1 : 0),
-        processed_jobs: (totals.processed_jobs || 0) + (stats.processed_jobs ? 1 : 0),
+        [stats.job.status]: (totals[stats.job.status] || 0) + 1,
       },
       jobs: {
         ...jobs,
-        ...stats.jobs,
+        [stats.job.id]: stats.job,
       },
     };
   }
@@ -74,4 +70,4 @@ export class Stats {
   }
 }
 
-export default new Stats();
+export default new Job();

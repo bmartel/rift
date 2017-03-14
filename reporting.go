@@ -6,26 +6,26 @@ func updateJob(s *summary.Stats, job *summary.Job) {
 	s.Jobs[job.Id] = job
 
 	switch job.Status {
-	case "job.queued":
+	case "queued":
 		s.QueuedJobs++
-	case "job.started":
+	case "started":
 		s.ActiveJobs++
-	case "job.processed":
+	case "processed":
 		if s.ActiveJobs > 0 {
 			s.ActiveJobs--
 		}
 		s.ProcessedJobs++
-	case "job.failed":
+	case "failed":
 		if s.ActiveJobs > 0 {
 			s.ActiveJobs--
 		}
 		s.FailedJobs++
-	case "job.deferred":
+	case "deferred":
 		if s.ActiveJobs > 0 {
 			s.ActiveJobs--
 		}
 		s.DeferredJobs++
-	case "job.requeued":
+	case "requeued":
 		if s.ActiveJobs > 0 {
 			s.ActiveJobs--
 		}

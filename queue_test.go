@@ -37,6 +37,7 @@ func (t SampleJob) Process(service rift.Service) error {
 	if t.ID == 0 || t.Title == "" || t.Body == "" {
 		return fmt.Errorf("missing data members")
 	}
+
 	log.Printf("ID: %d Title: %s Body: %s\n", t.ID, t.Title, t.Body)
 	return nil
 }
@@ -69,7 +70,7 @@ var _ = Describe("Queue", func() {
 		connectionRetry = 0
 
 		log.Println(runtime.NumGoroutine())
-		queue = rift.New(&rift.Options{"Test", nil, 10, 10, false, "localhost:9147"})
+		queue = rift.New(&rift.Options{"Test", nil, 100, 100, false, "localhost:9147"})
 	})
 	AfterEach(func() {
 		queue.Close()

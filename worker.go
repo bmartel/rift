@@ -83,21 +83,21 @@ func (w *Worker) Open() {
 	for {
 		select {
 		case job := <-w.channel:
-			w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.started", Worker: w.ID.String()}
+			w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "started", Worker: w.ID.String()}
 			// w.logger.Info("job started", zap.String("job", job.ID.String()))
 			// we have received a work request.
 			if err := job.Job.Process(w.service); err != nil {
-				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.failed", Worker: w.ID.String()}
+				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "failed", Worker: w.ID.String()}
 				// w.logger.Error("job failed: "+err.Error(), zap.String("job", job.ID.String()))
 				if job.Retry > job.Requeued {
-					w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.requeued", Worker: w.ID.String()}
+					w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "requeued", Worker: w.ID.String()}
 					// w.logger.Info("job requeued", zap.String("job", job.ID.String()))
 					// requeue the job
 					job.Requeued++
 					w.requeue <- job
 				}
 			} else {
-				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "job.processed", Worker: w.ID.String()}
+				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "processed", Worker: w.ID.String()}
 				// w.logger.Info("job processed", zap.String("job", job.ID.String()), zap.Float64("duration", time.Since(job.RequestedAt).Seconds()))
 				// Put the worker back into the queue reserve for another job to use
 				w.reserve <- w

@@ -163,7 +163,7 @@ func (q *Queue) Later(job Job, retry uint8) uuid.UUID {
 
 	// q.logger.Info("job queued", zap.String("job", id.String()))
 
-	q.metric <- &summary.Job{Id: id.String(), Status: "job.queued", Worker: q.id}
+	q.metric <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
 
 	// Capture the job imprint for serialization
 	q.registry.EncodeSerializer(job, q.stats)
@@ -234,7 +234,7 @@ func (q *Queue) metrics() {
 			updateJob(q.stats, job)
 			q.StartMonitoring()
 			if q.monitoring != nil {
-				q.monitoring.UpdateStats(context.Background(), q.stats)
+				q.monitoring.UpdateJob(context.Background(), &summary.JobUpdate{App: q.stats.App, QueueId: q.stats.QueueId, Job: job})
 			}
 		case <-q.closeMetric:
 			close(q.metric)

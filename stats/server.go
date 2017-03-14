@@ -27,15 +27,21 @@ var (
 )
 
 type statsServer struct {
-	stream chan *summary.Stats
+	statsStream chan *summary.Stats
+	jobStream   chan *summary.JobUpdate
 }
 
 func (s *statsServer) UpdateStats(ctx context.Context, stats *summary.Stats) (*summary.Stats, error) {
-	s.stream <- stats
+	s.statsStream <- stats
 	return stats, nil
 }
 
-func setupStatsServer(stream chan *summary.Stats) {
+func (s *statsServer) UpdateJob(ctx context.Context, job *summary.JobUpdate) (*summary.Job, error) {
+	s.jobStream <- job
+	return job.Job, nil
+}
+
+func setupStatsServer(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		grpclog.Fatalf("failed to listen: %v", err)
@@ -50,17 +56,23 @@ func setupStatsServer(stream chan *summary.Stats) {
 	}
 	grpcServer := grpc.NewServer(opts...)
 	srv := new(statsServer)
-	srv.stream = stream
+	srv.statsStream = statsStream
+	srv.jobStream = jobStream
 	summary.RegisterSummaryServer(grpcServer, srv)
 
 	grpcServer.Serve(lis)
 }
 
-func socket(stream chan *summary.Stats) func(*websocket.Conn) {
+func socket(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate) func(*websocket.Conn) {
 	return func(ws *websocket.Conn) {
 		for {
 			select {
-			case data := <-stream:
+			case data := <-statsStream:
+				if err := websocket.JSON.Send(ws, data); err != nil {
+					log.Println(err)
+					break
+				}
+			case data := <-jobStream:
 				if err := websocket.JSON.Send(ws, data); err != nil {
 					log.Println(err)
 					break
@@ -99,12 +111,19 @@ func main() {
 	flag.Parse()
 	indexTmpl := loadTemplate()
 
-	stream := make(chan *summary.Stats)
-	go setupStatsServer(stream)
+	statsStream := make(chan *summary.Stats)
+	jobStream := make(chan *summary.JobUpdate)
+
+	defer func(stats chan *summary.Stats, job chan *summary.JobUpdate) {
+		close(stats)
+		close(job)
+	}(statsStream, jobStream)
+
+	go setupStatsServer(statsStream, jobStream)
 
 	http.HandleFunc("/", serveTemplate(indexTmpl))
 
-	http.Handle("/ws", websocket.Handler(socket(stream)))
+	http.Handle("/ws", websocket.Handler(socket(statsStream, jobStream)))
 
 	box := rice.MustFindBox("static/dist")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(box.HTTPBox())))

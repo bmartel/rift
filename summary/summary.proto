@@ -2,6 +2,7 @@ syntax = "proto3";
 
 service Summary {
   rpc UpdateStats(Stats) returns (Stats){}
+  rpc UpdateJob(JobUpdate) returns (Job){}
 }
 
 message Job {
@@ -9,6 +10,12 @@ message Job {
   string tag = 2;
   string status = 3;
   string worker = 4;
+}
+
+message JobUpdate {
+  string app = 1;
+  string queue_id = 2;
+  Job job = 3;
 }
 
 message JobBlueprint {
