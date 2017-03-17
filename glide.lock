@@ -1,5 +1,5 @@
-hash: 089f72ceda6b73f299b71741a16fb5b5883de3452695f039e3e3bc00117ca128
-updated: 2017-03-11T23:02:29.020243202-06:00
+hash: fd9a802de376a4ba6bd1a2698204a404d0a9b35283cd1bc64fe90d53e38554dd
+updated: 2017-03-16T21:24:23.576187533-05:00
 imports:
 - name: github.com/daaku/go.zipexe
   version: a5fe2436ffcb3236e175e5149162b41cd28bd27d
@@ -15,28 +15,57 @@ imports:
   - proto
   - protoc-gen-go
 - name: github.com/kardianos/osext
-  version: 9b883c5eb462dd5cb1b0a7a104fe86bc6b9bd391
+  version: 9d302b58e975387d0b4d9be876622c86cefe64be
+- name: github.com/onsi/ginkgo
+  version: 462326b1628e124b23f42e87a8f2750e3c4e2d24
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - types
 - name: github.com/onsi/gomega
   version: 1de7ab2df9105aa5c15c4d7e14a8a514e3cb8d4b
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: golang.org/x/net
   version: a6577fac2d73be281a500b310739095313165611
   subpackages:
   - context
-  - websocket
   - http2
-  - trace
   - http2/hpack
   - idna
-  - lex/httplex
   - internal/timeseries
+  - lex/httplex
+  - trace
+  - websocket
 - name: google.golang.org/grpc
-  version: 4eaacfed9779ee7568c9e72e9f763dbd3af8e0b4
+  version: cdee119ee21e61eef7093a41ba148fa83585e143
   subpackages:
+  - codes
   - credentials
   - grpclog
-  - codes
   - internal
   - keepalive
   - metadata
@@ -45,4 +74,6 @@ imports:
   - stats
   - tap
   - transport
-devImports: []
+testImports:
+- name: gopkg.in/yaml.v2
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
