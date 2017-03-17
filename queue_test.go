@@ -81,7 +81,7 @@ var _ = Describe("Queue", func() {
 		It("should correctly queue and process a single job", func(done Done) {
 			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(1)))
@@ -94,7 +94,7 @@ var _ = Describe("Queue", func() {
 			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(2)))
@@ -107,7 +107,7 @@ var _ = Describe("Queue", func() {
 		It("should discard a failed job when retry is set to 0", func(done Done) {
 			queue.Later(FailedJob{}, 0)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(1)))
@@ -121,7 +121,7 @@ var _ = Describe("Queue", func() {
 		It("should requeue a job up to the set retry limit", func(done Done) {
 			queue.Later(FailedJob{}, 1)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(1)))
@@ -135,7 +135,7 @@ var _ = Describe("Queue", func() {
 		It("should requeue a job and succeed if within retry limit and without error", func(done Done) {
 			queue.Later(FailedJob{}, 3)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(1)))
@@ -158,7 +158,7 @@ var _ = Describe("Queue", func() {
 			Expect(id).ToNot(Equal(""))
 			Expect(err).To(BeNil())
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			stats := queue.Stats()
 			Expect(stats.QueuedJobs).To(Equal(uint32(2)))
@@ -171,7 +171,7 @@ var _ = Describe("Queue", func() {
 		It("should capture a queued jobs details and make them available for external sources to consume", func(done Done) {
 			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 10)
 
 			expected := []*summary.JobBlueprint{
 				&summary.JobBlueprint{
