@@ -26,6 +26,10 @@ var (
 	port     = flag.Int("port", 9147, "The server port")
 )
 
+type payload struct {
+	Message string `json:"message"`
+}
+
 type statsServer struct {
 	statsStream chan *summary.Stats
 	jobStream   chan *summary.JobUpdate
@@ -65,13 +69,36 @@ func setupStatsServer(statsStream chan *summary.Stats, jobStream chan *summary.J
 
 func socket(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate) func(*websocket.Conn) {
 	return func(ws *websocket.Conn) {
-		defer func(socketConn *websocket.Conn) {
+		var p payload
+		messageStream := make(chan payload)
+
+		defer func(socketConn *websocket.Conn, message chan payload) {
 			socketConn.Close()
 			log.Println("Closing socket connection")
-		}(ws)
+			close(message)
+		}(ws, messageStream)
+
+		go func(socketConn *websocket.Conn, message chan payload) {
+			for {
+				if err := websocket.JSON.Receive(socketConn, &p); err != nil {
+					log.Println(err)
+					log.Println("error reading message")
+					message <- payload{"disconnect"}
+					return
+				}
+
+				message <- p
+			}
+		}(ws, messageStream)
 
 		for {
 			select {
+			case msg := <-messageStream:
+				switch msg.Message {
+				case "disconnect":
+					log.Println("Disconnected client")
+					return
+				}
 			case data := <-statsStream:
 				if err := websocket.JSON.Send(ws, data); err != nil {
 					log.Printf("Socket Error: %v\n", err)

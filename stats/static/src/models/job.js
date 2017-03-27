@@ -1,3 +1,4 @@
+/* eslint-disable no-undef*/
 import m from 'mithril';
 import prop from 'mithril/stream';
 
@@ -7,13 +8,18 @@ export class Job {
     this.error = prop('');
 
     const wsScheme = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
-    const ws = new WebSocket(wsScheme + window.location.host + '/ws');
-    ws.onopen = this.init.bind(this);
-    ws.onmessage = this.receivedUpdate.bind(this);
-    ws.onerror = this.receivedError.bind(this);
+    this.socket = new WebSocket(`${wsScheme}${window.location.host}/ws`);
+    // this.socket.onopen = this.init.bind(this);
+    this.socket.onmessage = this.receivedUpdate.bind(this);
+    this.socket.onerror = this.receivedError.bind(this);
+    window.addEventListener('unload', this.disconnect.bind(this));
   }
 
-  init() {
+  disconnect() {
+    this.socket.send({ message: 'disconnect' });
+  }
+
+  // init() {
   //   this.apps = prop({});
   //   this.error = prop('');
   //
@@ -36,7 +42,7 @@ export class Job {
   //     },
   //   };
   //   m.redraw();
-  }
+  // }
 
   static initialAppTotals(totals) {
     return totals || {
@@ -79,7 +85,6 @@ export class Job {
   receivedError(event) {
     this.error(event.data);
     m.redraw();
-    console.debug("Error", this.error());
   }
 }
 
