@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 
 	"golang.org/x/net/context"
 	"golang.org/x/net/websocket"
@@ -25,6 +26,42 @@ var (
 	keyFile  = flag.String("key_file", "", "The TLS key file")
 	port     = flag.Int("port", 9147, "The server port")
 )
+
+type client struct {
+	connections map[*websocket.Conn]bool
+	mtx         sync.RWMutex
+}
+
+func (c *client) add(conn *websocket.Conn) {
+	c.mtx.Lock()
+	c.connections[conn] = true
+	c.mtx.Unlock()
+}
+
+func (c *client) exists(conn *websocket.Conn) bool {
+	c.mtx.RLock()
+	_, ok := c.connections[conn]
+	c.mtx.RUnlock()
+	return ok
+}
+
+func (c *client) remove(conn *websocket.Conn) {
+	c.mtx.Lock()
+	if _, ok := c.connections[conn]; ok {
+		delete(c.connections, conn)
+	}
+	c.mtx.Unlock()
+}
+
+func (c *client) broadcast(data *summary.JobUpdate) {
+	c.mtx.Lock()
+	for cl := range c.connections {
+		if err := websocket.JSON.Send(cl, data); err != nil {
+			log.Printf("Socket Error: %v\n", err)
+		}
+	}
+	c.mtx.Unlock()
+}
 
 type payload struct {
 	Message string `json:"message"`
@@ -67,49 +104,38 @@ func setupStatsServer(statsStream chan *summary.Stats, jobStream chan *summary.J
 	grpcServer.Serve(lis)
 }
 
-func socket(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate) func(*websocket.Conn) {
+func socket(clients *client) func(*websocket.Conn) {
 	return func(ws *websocket.Conn) {
 		var p payload
-		messageStream := make(chan payload)
 
-		defer func(socketConn *websocket.Conn, message chan payload) {
+		clients.add(ws)
+
+		defer func(socketConn *websocket.Conn) {
+			clients.remove(ws)
 			socketConn.Close()
 			log.Println("Closing socket connection")
-			close(message)
-		}(ws, messageStream)
-
-		go func(socketConn *websocket.Conn, message chan payload) {
-			for {
-				if err := websocket.JSON.Receive(socketConn, &p); err != nil {
-					log.Println(err)
-					log.Println("error reading message")
-					message <- payload{"disconnect"}
-					return
-				}
-
-				message <- p
-			}
-		}(ws, messageStream)
+		}(ws)
 
 		for {
-			select {
-			case msg := <-messageStream:
-				switch msg.Message {
-				case "disconnect":
-					log.Println("Disconnected client")
-					return
-				}
-			case data := <-statsStream:
-				if err := websocket.JSON.Send(ws, data); err != nil {
-					log.Printf("Socket Error: %v\n", err)
-					return
-				}
-			case data := <-jobStream:
-				if err := websocket.JSON.Send(ws, data); err != nil {
-					log.Printf("Socket Error: %v\n", err)
-					return
-				}
+			if err := websocket.JSON.Receive(ws, &p); err != nil {
+				log.Println(err)
+				log.Println("error reading message")
+				return
 			}
+			switch p.Message {
+			case "disconnect":
+				log.Println("Disconnected client")
+				return
+			}
+		}
+	}
+}
+
+func socketStream(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate, clients *client) {
+	for {
+		select {
+		case data := <-jobStream:
+			clients.broadcast(data)
 		}
 	}
 }
@@ -145,17 +171,21 @@ func main() {
 
 	statsStream := make(chan *summary.Stats)
 	jobStream := make(chan *summary.JobUpdate)
-
-	defer func(stats chan *summary.Stats, job chan *summary.JobUpdate) {
+	clients := &client{
+		connections: make(map[*websocket.Conn]bool, 0),
+		mtx:         sync.RWMutex{},
+	}
+	defer func(stats chan *summary.Stats, job chan *summary.JobUpdate, cl *client) {
 		close(stats)
 		close(job)
-	}(statsStream, jobStream)
+	}(statsStream, jobStream, clients)
 
 	go setupStatsServer(statsStream, jobStream)
+	go socketStream(statsStream, jobStream, clients)
 
 	http.HandleFunc("/", serveTemplate(indexTmpl))
 
-	http.Handle("/ws", websocket.Handler(socket(statsStream, jobStream)))
+	http.Handle("/ws", websocket.Handler(socket(clients)))
 
 	box := rice.MustFindBox("static/dist")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(box.HTTPBox())))

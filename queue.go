@@ -61,6 +61,7 @@ type Options struct {
 
 // New creates a rift queue, allowing options to be passed
 func New(opts *Options) *Queue {
+
 	// Number of workers to spawn
 	maxWorkers, err := strconv.Atoi(maxWorker)
 	if err != nil {
