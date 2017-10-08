@@ -8,7 +8,7 @@
   "scripts": {
     "watch": "NODE_ENV=development webpack-dev-server --content-base ./dist/ --inline --hot --host=0.0.0.0 --port=9000",
     "build": "NODE_ENV=production webpack -p --config ./webpack.config.js",
-    "prebuild": "npm run clean",
+    "prebuild": "npm run clean && yarn install",
     "clean": "rimraf $npm_package_config_buildDir && mkdir $npm_package_config_buildDir",
     "test": "mocha --compilers css:./test-compiler,js:babel-core/register --recursive",
     "lint": "eslint ./src ./spec"
