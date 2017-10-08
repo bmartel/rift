@@ -3,6 +3,7 @@ package rift
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 	"github.com/bmartel/rift/summary"
 	"github.com/satori/go.uuid"
-	// "github.com/uber-go/zap"
+	"go.uber.org/zap"
 )
 
 // Queue provides the context and handling for jobs for one App instance
@@ -37,7 +38,7 @@ type Queue struct {
 	createdAt time.Time
 
 	// logging
-	// logger  zap.Logger
+	logger  *zap.Logger
 	verbose bool
 
 	// serialization
@@ -89,6 +90,13 @@ func New(opts *Options) *Queue {
 
 	var id uuid.UUID
 	id = uuid.NewV4()
+
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	defer logger.Sync()
+
 	q := &Queue{
 		id:              id.String(),
 		channel:         make(chan ReservedJob, opts.Queues),
@@ -102,9 +110,9 @@ func New(opts *Options) *Queue {
 		stats:           new(summary.Stats),
 		registry:        NewRegistry(),
 		statsAddr:       opts.StatsAddr,
-		// logger:          zap.New(zap.NewJSONEncoder(), zap.Fields(zap.String("queue", id.String()))),
-		verbose:   opts.Verbose,
-		createdAt: time.Now(),
+		logger:          logger,
+		verbose:         opts.Verbose,
+		createdAt:       time.Now(),
 	}
 
 	q.stats.App = opts.Tag
@@ -112,17 +120,16 @@ func New(opts *Options) *Queue {
 	q.stats.Jobs = make(map[string]*summary.Job, 0)
 	q.stats.JobBlueprints = make([]*summary.JobBlueprint, 0)
 
-	// if opts.Verbose {
-	// 	q.logger.Info("queue started")
-	// }
+	if opts.Verbose {
+		q.logger.Info("queue started")
+	}
 
 	// starting n number of workers
 	for i := 0; i < opts.Workers; i++ {
-		// id = dispatchWorker(opts.Service, q.workers, q.channel, q.reservedWorkers, q.metric, opts.Queues, q.logger, opts.Verbose)
-		id = dispatchWorker(opts.Service, q.workers, q.channel, q.reservedWorkers, q.metric, opts.Queues, opts.Verbose)
+		id = dispatchWorker(opts.Service, q.workers, q.channel, q.reservedWorkers, q.metric, opts.Queues, q.logger, opts.Verbose)
 	}
 
-	// q.logger.Info("workers started", zap.Int("count", opts.Workers))
+	q.logger.Info("workers started", zap.Int("count", opts.Workers))
 
 	go q.dispatch()
 	go q.metrics()
@@ -142,11 +149,11 @@ func (q *Queue) StartMonitoring() {
 	if q.rpcConn == nil && q.statsAddr != "" {
 		conn, err := grpc.Dial(q.statsAddr, grpc.WithInsecure())
 		if err != nil {
-			// q.logger.Error(err.Error())
+			q.logger.Error(err.Error())
 		} else {
 			q.rpcConn = conn
 			q.monitoring = summary.NewSummaryClient(q.rpcConn)
-			// q.logger.Info("CONNECTED TO MONITORING SERVER")
+			q.logger.Info("CONNECTED TO MONITORING SERVER")
 		}
 	}
 }
@@ -162,7 +169,7 @@ func (q *Queue) Later(job Job, retry uint8) uuid.UUID {
 		Retry:       retry,
 	}
 
-	// q.logger.Info("job queued", zap.String("job", id.String()))
+	q.logger.Info("job queued", zap.String("job", id.String()))
 
 	q.metric <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
 
@@ -200,15 +207,15 @@ func (q *Queue) Close() {
 	if q.rpcConn != nil {
 		q.rpcConn.Close()
 	}
-	// if q.verbose {
-	// 	q.logger.Info("queue stopped")
-	// }
+	if q.verbose {
+		q.logger.Info("queue stopped")
+	}
 }
 
 func (q *Queue) dispatch() {
-	// if q.verbose {
-	// 	q.logger.Info("queue started")
-	// }
+	if q.verbose {
+		q.logger.Info("queue started")
+	}
 
 	for {
 		select {
