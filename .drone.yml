@@ -1,5 +1,0 @@
-build:
-  image: bmartel/go:1.8-alpine
-  commands:
-    - glide install
-    - go test
