@@ -2,6 +2,7 @@ package rift
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/bmartel/rift/summary"
 	"github.com/fatih/structs"
@@ -21,6 +22,7 @@ func NewRegistry() *Registry {
 
 // Registry tracks any in use serializers
 type Registry struct {
+	mutex       sync.RWMutex
 	serializers map[string]*Serializer
 }
 
@@ -28,10 +30,14 @@ type Registry struct {
 // blueprint with the stats service
 func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 
+	r.serializers.mutex.RLock()
 	// Check if it already exists
 	if _, ok := r.serializers[job.Tag()]; ok {
+		r.serializers.mutex.Runlock()
 		return // dont reprocess
 	}
+
+	r.serializers.mutex.Runlock()
 
 	blueprint := &summary.JobBlueprint{
 		JobName: job.Tag(),
@@ -48,9 +54,12 @@ func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 		}
 	}
 	stats.JobBlueprints = append(stats.JobBlueprints, blueprint)
+
+	r.serializers.mutex.Lock()
 	r.serializers[job.Tag()] = &Serializer{
 		Job: job,
 	}
+	r.serializers.mutex.Unlock()
 }
 
 // DeserializeJob creates a job from external values
