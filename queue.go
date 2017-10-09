@@ -161,27 +161,33 @@ func (q *Queue) StartMonitoring() {
 // Later queues up a job for processing and returns the id of the job
 func (q *Queue) Later(job Job, retry uint8) uuid.UUID {
 	id := uuid.NewV4()
+	go func() {
+		q.channel <- ReservedJob{
+			ID:          id,
+			Job:         job,
+			RequestedAt: time.Now(),
+			Retry:       retry,
+		}
 
-	q.channel <- ReservedJob{
-		ID:          id,
-		Job:         job,
-		RequestedAt: time.Now(),
-		Retry:       retry,
-	}
+		q.logger.Info("job queued", zap.String("job", id.String()))
 
-	q.logger.Info("job queued", zap.String("job", id.String()))
+		q.metric <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
 
-	q.metric <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
-
-	// Capture the job imprint for serialization
-	q.registry.EncodeSerializer(job, q.stats)
-
+	}()
 	return id
+}
+
+// Register a job type so it can be looked up through deserialization
+func (q *Queue) Register(jobs ...Job) {
+	for _, job := range jobs {
+		// Capture the job imprint for serialization
+		q.registry.SerializeJob(job, q.stats)
+	}
 }
 
 // CreateJob type through serialization
 func (q *Queue) CreateJob(jobType string, data map[string]interface{}, retry uint8) (string, error) {
-	job := q.registry.DecodeJob(jobType, data)
+	job := q.registry.DeserializeJob(jobType, data)
 	if job == nil {
 		return "", fmt.Errorf("no job serializer could be found for %s", jobType)
 	}

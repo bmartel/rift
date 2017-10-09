@@ -24,9 +24,9 @@ type Registry struct {
 	serializers map[string]*Serializer
 }
 
-// EncodeSerializer deconstructs a job into a serializer and also registers a
+// SerializeJob deconstructs a job into a serializer and also registers a
 // blueprint with the stats service
-func (r *Registry) EncodeSerializer(job Job, stats *summary.Stats) {
+func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 
 	// Check if it already exists
 	if _, ok := r.serializers[job.Tag()]; ok {
@@ -53,12 +53,12 @@ func (r *Registry) EncodeSerializer(job Job, stats *summary.Stats) {
 	}
 }
 
-// DecodeJob creates a job from external values
-func (r *Registry) DecodeJob(jobType string, data map[string]interface{}) Job {
+// DeserializeJob creates a job from external values
+func (r *Registry) DeserializeJob(jobType string, data map[string]interface{}) Job {
 
 	// lookup the incoming job type
 	if serializer, ok := r.serializers[jobType]; ok {
-		return serializer.Job.Build(data)
+		return serializer.Job.Deserialize(data)
 	}
 
 	return nil

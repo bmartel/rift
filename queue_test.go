@@ -25,7 +25,7 @@ func (t SampleJob) Tag() string {
 	return "SampleJob"
 }
 
-func (t SampleJob) Build(data map[string]interface{}) rift.Job {
+func (t SampleJob) Deserialize(data map[string]interface{}) rift.Job {
 	return SampleJob{
 		ID:    data["id"].(int),
 		Title: data["title"].(string),
@@ -49,7 +49,7 @@ func (t FailedJob) Tag() string {
 	return "FailedJob"
 }
 
-func (t FailedJob) Build(data map[string]interface{}) rift.Job {
+func (t FailedJob) Deserialize(data map[string]interface{}) rift.Job {
 	return FailedJob{}
 }
 
@@ -58,6 +58,25 @@ func (t FailedJob) Process(service rift.Service) error {
 		connectionRetry++
 		return fmt.Errorf("connection timeout error")
 	}
+	return nil
+}
+
+type LongRunningJob struct{}
+
+func (t LongRunningJob) Tag() string {
+	return "LongRunningJob"
+}
+
+func (t LongRunningJob) Deserialize(data map[string]interface{}) rift.Job {
+	return LongRunningJob{}
+}
+
+func (t LongRunningJob) Process(service rift.Service) error {
+
+	log.Printf("LongRunningJob - started")
+	time.Sleep(time.Second * 6)
+	log.Printf("LongRunningJob - complete")
+
 	return nil
 }
 
@@ -147,7 +166,7 @@ var _ = Describe("Queue", func() {
 		}, 3)
 
 		It("should capture a queued jobs details and correctly produce a new job through serialization", func(done Done) {
-			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+			queue.Register(SampleJob{})
 
 			id, err := queue.CreateJob("SampleJob", map[string]interface{}{
 				"id":    2,
@@ -161,15 +180,15 @@ var _ = Describe("Queue", func() {
 			time.Sleep(time.Millisecond * 50)
 
 			stats := queue.Stats()
-			Expect(stats.QueuedJobs).To(Equal(uint32(2)))
-			Expect(stats.ProcessedJobs).To(Equal(uint32(2)))
+			Expect(stats.QueuedJobs).To(Equal(uint32(1)))
+			Expect(stats.ProcessedJobs).To(Equal(uint32(1)))
 			Expect(stats.FailedJobs).To(Equal(uint32(0)))
 
 			close(done)
 		}, 3)
 
 		It("should capture a queued jobs details and make them available for external sources to consume", func(done Done) {
-			queue.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+			queue.Register(SampleJob{})
 
 			time.Sleep(time.Millisecond * 50)
 
@@ -188,6 +207,25 @@ var _ = Describe("Queue", func() {
 
 			close(done)
 		}, 3)
+
+		It("should queue and process jobs even if the queue is saturated", func(done Done) {
+			queue2 := rift.New(&rift.Options{"Test", nil, 2, 1, false, "localhost:9147"})
+			queue2.Later(LongRunningJob{}, 1)
+			queue2.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+			queue2.Later(LongRunningJob{}, 1)
+			queue2.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
+
+			time.Sleep(time.Second * 7)
+
+			stats := queue2.Stats()
+			Expect(stats.QueuedJobs).To(Equal(uint32(4)))
+			Expect(stats.ProcessedJobs).To(Equal(uint32(4)))
+			Expect(stats.RequeuedJobs).To(Equal(uint32(0)))
+			Expect(stats.FailedJobs).To(Equal(uint32(0)))
+
+			queue2.Close()
+			close(done)
+		}, 8)
 
 	})
 })
