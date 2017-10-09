@@ -16,11 +16,16 @@ const Dashboard = {
         m('h2', name),
 
         m('.row', [
-          m('.col', m('.card.card-inverse.card-info.mb-3.text-center', m('.card-block', app.totals.active))),
-          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center', m('.card-block', app.totals.queued))),
-          m('.col', m('.card.card-inverse.card-success.mb-3.text-center', m('.card-block', app.totals.processed))),
-          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center', m('.card-block', app.totals.failed))),
-          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center', m('.card-block', app.totals.requeued))),
+          m('.col', m('.card.card-inverse.card-info.mb-3.text-center',
+            m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Active'), m('span', app.totals.active)]))),
+          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center',
+            m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Queued'), m('span', app.totals.queued)]))),
+          m('.col', m('.card.card-inverse.card-success.mb-3.text-center',
+            m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Processed'), m('span', app.totals.processed)]))),
+          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center',
+            m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Failed'), m('span', app.totals.failed)]))),
+          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center',
+            m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Retried'), m('span', app.totals.requeued)]))),
         ]),
 
         m('table.table', [
