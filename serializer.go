@@ -33,11 +33,11 @@ func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 	r.mutex.RLock()
 	// Check if it already exists
 	if _, ok := r.serializers[job.Tag()]; ok {
-		r.mutex.Runlock()
+		r.mutex.RUnlock()
 		return // dont reprocess
 	}
 
-	r.mutex.Runlock()
+	r.mutex.RUnlock()
 
 	blueprint := &summary.JobBlueprint{
 		JobName: job.Tag(),
