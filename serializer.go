@@ -30,14 +30,14 @@ type Registry struct {
 // blueprint with the stats service
 func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 
-	r.serializers.mutex.RLock()
+	r.mutex.RLock()
 	// Check if it already exists
 	if _, ok := r.serializers[job.Tag()]; ok {
-		r.serializers.mutex.Runlock()
+		r.mutex.Runlock()
 		return // dont reprocess
 	}
 
-	r.serializers.mutex.Runlock()
+	r.mutex.Runlock()
 
 	blueprint := &summary.JobBlueprint{
 		JobName: job.Tag(),
@@ -55,11 +55,11 @@ func (r *Registry) SerializeJob(job Job, stats *summary.Stats) {
 	}
 	stats.JobBlueprints = append(stats.JobBlueprints, blueprint)
 
-	r.serializers.mutex.Lock()
+	r.mutex.Lock()
 	r.serializers[job.Tag()] = &Serializer{
 		Job: job,
 	}
-	r.serializers.mutex.Unlock()
+	r.mutex.Unlock()
 }
 
 // DeserializeJob creates a job from external values
