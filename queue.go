@@ -19,18 +19,17 @@ type Queue struct {
 	id string
 
 	// A buffered channel that we can send work requests on.
-	channel chan ReservedJob
+	channel      chan ReservedJob
+	closeQueue   chan bool
+	queueRemoved chan bool
 
 	// workers channel
-	workers         chan *Worker
-	reservedWorkers chan *Worker
-	removed         chan bool
-	quit            chan bool
+	workers chan *Worker
 
 	// metrics channel
-	closeMetric   chan bool
-	removedMetric chan bool
-	metric        chan *summary.Job
+	metrics              chan *summary.Job
+	closeMetricsServer   chan bool
+	metricsServerRemoved chan bool
 
 	// metrics
 	stats *summary.Stats
@@ -53,7 +52,6 @@ type Queue struct {
 // Options provides a way to configure a rift queue
 type Options struct {
 	Tag       string
-	Service   Service
 	Workers   int
 	Queues    int
 	Verbose   bool
@@ -61,7 +59,7 @@ type Options struct {
 }
 
 // New creates a rift queue, allowing options to be passed
-func New(opts *Options) *Queue {
+func New(opts *Options, service Service) *Queue {
 
 	// Number of workers to spawn
 	maxWorkers, err := strconv.Atoi(maxWorker)
@@ -75,7 +73,7 @@ func New(opts *Options) *Queue {
 	}
 
 	if opts == nil {
-		opts = &Options{"", nil, 0, 0, false, ""}
+		opts = &Options{"", 0, 0, false, ""}
 	}
 
 	if opts.Tag == "" {
@@ -98,21 +96,20 @@ func New(opts *Options) *Queue {
 	defer logger.Sync()
 
 	q := &Queue{
-		id:              id.String(),
-		channel:         make(chan ReservedJob, opts.Queues),
-		workers:         make(chan *Worker, opts.Workers),
-		reservedWorkers: make(chan *Worker, opts.Workers),
-		removed:         make(chan bool),
-		quit:            make(chan bool),
-		closeMetric:     make(chan bool),
-		removedMetric:   make(chan bool),
-		metric:          make(chan *summary.Job),
-		stats:           new(summary.Stats),
-		registry:        NewRegistry(),
-		statsAddr:       opts.StatsAddr,
-		logger:          logger,
-		verbose:         opts.Verbose,
-		createdAt:       time.Now(),
+		id:                   id.String(),
+		channel:              make(chan ReservedJob, opts.Queues),
+		workers:              make(chan *Worker, opts.Workers),
+		closeQueue:           make(chan bool),
+		queueRemoved:         make(chan bool),
+		closeMetricsServer:   make(chan bool),
+		metricsServerRemoved: make(chan bool),
+		metrics:              make(chan *summary.Job),
+		stats:                new(summary.Stats),
+		registry:             NewRegistry(),
+		statsAddr:            opts.StatsAddr,
+		logger:               logger,
+		verbose:              opts.Verbose,
+		createdAt:            time.Now(),
 	}
 
 	q.stats.App = opts.Tag
@@ -126,15 +123,13 @@ func New(opts *Options) *Queue {
 
 	// starting n number of workers
 	for i := 0; i < opts.Workers; i++ {
-		id = dispatchWorker(opts.Service, q.workers, q.channel, q.reservedWorkers, q.metric, opts.Queues, q.logger, opts.Verbose)
+		dispatchWorker(q, service, opts)
 	}
 
 	q.logger.Info("workers started", zap.Int("count", opts.Workers))
 
-	go q.dispatch()
-	go q.metrics()
-
-	q.StartMonitoring()
+	go q.startDispatcher()
+	go q.startMetricsCapture()
 
 	return q
 }
@@ -144,8 +139,8 @@ func (q *Queue) Stats() *summary.Stats {
 	return q.stats
 }
 
-// StartMonitoring tries a connection to a monitoring server instance if available
-func (q *Queue) StartMonitoring() {
+// tries a connection to a monitoring server instance if available
+func (q *Queue) startMonitoringServer() {
 	if q.rpcConn == nil && q.statsAddr != "" {
 		conn, err := grpc.Dial(q.statsAddr, grpc.WithInsecure())
 		if err != nil {
@@ -171,7 +166,7 @@ func (q *Queue) Later(job Job, retry uint8) uuid.UUID {
 
 		q.logger.Info("job queued", zap.String("job", id.String()))
 
-		q.metric <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
+		q.metrics <- &summary.Job{Id: id.String(), Status: "queued", Worker: q.id}
 
 	}()
 	return id
@@ -199,26 +194,26 @@ func (q *Queue) CreateJob(jobType string, data map[string]interface{}, retry uin
 
 // Close the queue, first draining any open workers and jobs in queue
 func (q *Queue) Close() {
-	q.quit <- true
-	<-q.removed
+	q.closeQueue <- true
+	<-q.queueRemoved
 	q.drain()
-	close(q.removed)
+	close(q.queueRemoved)
 	close(q.workers)
-	close(q.reservedWorkers)
 	close(q.channel)
-	q.closeMetric <- true
-	<-q.removedMetric
-	close(q.removedMetric)
+	q.closeMetricsServer <- true
+	<-q.metricsServerRemoved
+	close(q.metricsServerRemoved)
 	q.monitoring = nil
 	if q.rpcConn != nil {
 		q.rpcConn.Close()
+		q.rpcConn = nil
 	}
 	if q.verbose {
 		q.logger.Info("queue stopped")
 	}
 }
 
-func (q *Queue) dispatch() {
+func (q *Queue) startDispatcher() {
 	if q.verbose {
 		q.logger.Info("queue started")
 	}
@@ -228,32 +223,32 @@ func (q *Queue) dispatch() {
 		case job := <-q.channel:
 			// a job request has been received
 			// try to obtain a worker that is available.
-			worker := <-q.reservedWorkers
+			worker := <-q.workers
 
 			// dispatch the job to the worker channel
 			worker.channel <- job
 
-		case <-q.quit:
-			close(q.quit)
-			q.removed <- true
+		case <-q.closeQueue:
+			close(q.closeQueue)
+			q.queueRemoved <- true
 			return
 		}
 	}
 }
 
-func (q *Queue) metrics() {
+func (q *Queue) startMetricsCapture() {
 	for {
 		select {
-		case job := <-q.metric:
+		case job := <-q.metrics:
 			updateJob(q.stats, job)
-			q.StartMonitoring()
+			q.startMonitoringServer()
 			if q.monitoring != nil {
 				q.monitoring.UpdateJob(context.Background(), &summary.JobUpdate{App: q.stats.App, QueueId: q.stats.QueueId, Job: job})
 			}
-		case <-q.closeMetric:
-			close(q.metric)
-			close(q.closeMetric)
-			q.removedMetric <- true
+		case <-q.closeMetricsServer:
+			close(q.metrics)
+			close(q.closeMetricsServer)
+			q.metricsServerRemoved <- true
 			return
 		}
 	}

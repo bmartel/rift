@@ -35,35 +35,29 @@ type ReservedJob struct {
 
 // Worker represents the worker that executes the job
 type Worker struct {
-	ID       uuid.UUID
-	register chan *Worker
-	reserve  chan *Worker
-	channel  chan ReservedJob
-	requeue  chan ReservedJob
-	removed  chan bool
-	quit     chan bool
+	ID      uuid.UUID
+	channel chan ReservedJob
+	removed chan bool
+	quit    chan bool
 
+	queue   *Queue
 	service Service
 
-	metric  chan *summary.Job
 	logger  *zap.Logger
 	verbose bool
 }
 
-func dispatchWorker(service Service, register chan *Worker, requeue chan ReservedJob, reserve chan *Worker, metric chan *summary.Job, queueSize int, logger *zap.Logger, verbose bool) uuid.UUID {
+func dispatchWorker(queue *Queue, service Service, opts *Options) uuid.UUID {
 	id := uuid.NewV4()
 	w := &Worker{
-		ID:       id,
-		register: register,
-		reserve:  reserve,
-		metric:   metric,
-		channel:  make(chan ReservedJob, queueSize),
-		requeue:  requeue,
-		removed:  make(chan bool),
-		quit:     make(chan bool),
-		service:  service,
-		logger:   logger.With(zap.String("worker", id.String())),
-		verbose:  verbose,
+		ID:      id,
+		channel: make(chan ReservedJob, opts.Queues),
+		removed: make(chan bool),
+		quit:    make(chan bool),
+		queue:   queue,
+		service: service,
+		logger:  queue.logger.With(zap.String("worker", id.String())),
+		verbose: opts.Verbose,
 	}
 	go w.Open()
 	return id
@@ -77,29 +71,29 @@ func (w *Worker) Open() {
 	}
 
 	// register the current worker into the worker queue.
-	w.register <- w
-	w.reserve <- w
+	w.queue.workers <- w
+
 	for {
 		select {
 		case job := <-w.channel:
-			w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "started", Worker: w.ID.String()}
+			w.queue.metrics <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "started", Worker: w.ID.String()}
 			w.logger.Info("job started", zap.String("job", job.ID.String()))
 			// we have received a work request.
 			if err := job.Job.Process(w.service); err != nil {
-				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "failed", Worker: w.ID.String()}
+				w.queue.metrics <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "failed", Worker: w.ID.String()}
 				w.logger.Error("job failed: "+err.Error(), zap.String("job", job.ID.String()))
 				if job.Retry > job.Requeued {
-					w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "requeued", Worker: w.ID.String()}
+					w.queue.metrics <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "requeued", Worker: w.ID.String()}
 					w.logger.Info("job requeued", zap.String("job", job.ID.String()))
 					// requeue the job
 					job.Requeued++
-					w.requeue <- job
+					w.queue.channel <- job
 				}
 			} else {
-				w.metric <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "processed", Worker: w.ID.String()}
+				w.queue.metrics <- &summary.Job{Id: job.ID.String(), Tag: job.Job.Tag(), Status: "processed", Worker: w.ID.String()}
 				w.logger.Info("job processed", zap.String("job", job.ID.String()), zap.Float64("duration", time.Since(job.RequestedAt).Seconds()))
 				// Put the worker back into the queue reserve for another job to use
-				w.reserve <- w
+				w.queue.workers <- w
 			}
 		case <-w.quit:
 			close(w.channel)
