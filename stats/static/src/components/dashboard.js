@@ -16,11 +16,11 @@ const Dashboard = {
         m('h2', name),
 
         m('.row', [
-          m('.col', m('.card.card-inverse.card-info.mb-3.text-center', m('.card-block', app.totals.active))),
-          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center', m('.card-block', app.totals.queued))),
-          m('.col', m('.card.card-inverse.card-success.mb-3.text-center', m('.card-block', app.totals.processed))),
-          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center', m('.card-block', app.totals.failed))),
-          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center', m('.card-block', app.totals.requeued))),
+          m('.col', m('.card.card-inverse.card-info.mb-3.text-center', m('.card-block', app.totals.active_jobs))),
+          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center', m('.card-block', app.totals.queued_jobs))),
+          m('.col', m('.card.card-inverse.card-success.mb-3.text-center', m('.card-block', app.totals.processed_jobs))),
+          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center', m('.card-block', app.totals.failed_jobs))),
+          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center', m('.card-block', app.totals.requeued_jobs))),
         ]),
 
         m('table.table', [

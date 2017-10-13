@@ -131,6 +131,8 @@ func New(opts *Options, service Service) *Queue {
 	go q.startDispatcher()
 	go q.startMetricsCapture()
 
+	q.startMonitoringServer()
+
 	return q
 }
 
@@ -244,6 +246,7 @@ func (q *Queue) startMetricsCapture() {
 			q.startMonitoringServer()
 			if q.monitoring != nil {
 				q.monitoring.UpdateJob(context.Background(), &summary.JobUpdate{App: q.stats.App, QueueId: q.stats.QueueId, Job: job})
+				q.monitoring.UpdateStats(context.Background(), q.stats)
 			}
 		case <-q.closeMetricsServer:
 			close(q.metrics)

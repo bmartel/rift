@@ -89,7 +89,7 @@ var _ = Describe("Queue", func() {
 		connectionRetry = 0
 
 		log.Println(runtime.NumGoroutine())
-		queue = rift.New(&rift.Options{"Test", 100, 100, false, ""}, nil)
+		queue = rift.New(&rift.Options{"Test", 100, 100, false, "localhost:9147"}, nil)
 	})
 	AfterEach(func() {
 		queue.Close()
@@ -209,7 +209,7 @@ var _ = Describe("Queue", func() {
 		}, 3)
 
 		It("should queue and process jobs even if the queue is saturated", func(done Done) {
-			queue2 := rift.New(&rift.Options{"Test", 2, 1, false, ""}, nil)
+			queue2 := rift.New(&rift.Options{"Test", 2, 1, false, "localhost:9147"}, nil)
 			queue2.Later(LongRunningJob{}, 1)
 			queue2.Later(SampleJob{1, "Rift", "Running a Managed Goroutine"}, 0)
 			queue2.Later(LongRunningJob{}, 1)

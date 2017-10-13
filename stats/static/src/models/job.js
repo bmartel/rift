@@ -46,29 +46,42 @@ export class Job {
 
   static initialAppTotals(totals) {
     return totals || {
-      active: 0,
-      queued: 0,
-      processed: 0,
-      failed: 0,
-      requeued: 0,
+      active_jobs: 0,
+      queued_jobs: 0,
+      processed_jobs: 0,
+      failed_jobs: 0,
+      requeued_jobs: 0,
     };
   }
 
   updateApps(stats) {
-    const apps = this.apps()[stats.app] || {};
-    const totals = Job.initialAppTotals(apps.totals);
-    const jobs = apps.jobs || {};
-    const job = stats.job;
-    job.queue_id = stats.queue_id;
+    const app = this.apps()[stats.app] || {};
+    const totals = Job.initialAppTotals(app.totals);
+    const jobs = app.jobs || {};
+
+    if (stats.job) {
+      const job = stats.job;
+      job.queue_id = stats.queue_id;
+
+      return {
+        totals: {
+          ...totals,
+          [`${job.status}_jobs`]: (totals[`${job.status}_jobs`] || 0) + 1,
+        },
+        jobs: {
+          ...jobs,
+          [job.id]: job,
+        },
+      };
+    }
+
+    const { active_jobs } = stats;
 
     return {
+      jobs,
       totals: {
         ...totals,
-        [stats.job.status]: (totals[stats.job.status] || 0) + 1,
-      },
-      jobs: {
-        ...jobs,
-        [job.id]: job,
+        active_jobs: active_jobs || 0, //eslint-disable-line
       },
     };
   }

@@ -53,7 +53,7 @@ func (c *client) remove(conn *websocket.Conn) {
 	c.mtx.Unlock()
 }
 
-func (c *client) broadcast(data *summary.JobUpdate) {
+func (c *client) broadcast(data interface{}) {
 	c.mtx.Lock()
 	for cl := range c.connections {
 		if err := websocket.JSON.Send(cl, data); err != nil {
@@ -110,16 +110,15 @@ func socket(clients *client) func(*websocket.Conn) {
 
 		clients.add(ws)
 
-		defer func(socketConn *websocket.Conn) {
-			clients.remove(ws)
-			socketConn.Close()
+		defer func(conn *websocket.Conn, cl *client) {
 			log.Println("Closing socket connection")
-		}(ws)
+			cl.remove(conn)
+			conn.Close()
+		}(ws, clients)
 
 		for {
 			if err := websocket.JSON.Receive(ws, &p); err != nil {
 				log.Println(err)
-				log.Println("error reading message")
 				return
 			}
 			switch p.Message {
@@ -134,6 +133,8 @@ func socket(clients *client) func(*websocket.Conn) {
 func socketStream(statsStream chan *summary.Stats, jobStream chan *summary.JobUpdate, clients *client) {
 	for {
 		select {
+		case data := <-statsStream:
+			clients.broadcast(data)
 		case data := <-jobStream:
 			clients.broadcast(data)
 		}
@@ -178,6 +179,7 @@ func main() {
 	defer func(stats chan *summary.Stats, job chan *summary.JobUpdate, cl *client) {
 		close(stats)
 		close(job)
+		cl = nil
 	}(statsStream, jobStream, clients)
 
 	go setupStatsServer(statsStream, jobStream)
