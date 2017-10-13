@@ -16,11 +16,11 @@ const Dashboard = {
         m('h2', name),
 
         m('.row', [
-          m('.col', m('.card.card-inverse.card-info.mb-3.text-center', m('.card-block', app.totals.active_jobs))),
-          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center', m('.card-block', app.totals.queued_jobs))),
-          m('.col', m('.card.card-inverse.card-success.mb-3.text-center', m('.card-block', app.totals.processed_jobs))),
-          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center', m('.card-block', app.totals.failed_jobs))),
-          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center', m('.card-block', app.totals.requeued_jobs))),
+          m('.col', m('.card.card-inverse.card-info.mb-3.text-center', m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Active'), m('span', app.totals.active_jobs)]))),
+          m('.col', m('.card.card-inverse.card-primary.mb-3.text-center', m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Queued'), m('span', app.totals.queued_jobs)]))),
+          m('.col', m('.card.card-inverse.card-success.mb-3.text-center', m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Processed'), m('span', app.totals.processed_jobs)]))),
+          m('.col', m('.card.card-inverse.card-danger.mb-3.text-center', m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Failed'), m('span', app.totals.failed_jobs)]))),
+          m('.col', m('.card.card-inverse.card-warning.mb-3.text-center', m('.card-block.d-flex.flex-column.justify-content-center', [m('span.text-white', 'Retried'), m('span', app.totals.requeued_jobs)]))),
         ]),
 
         m('table.table', [
