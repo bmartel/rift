@@ -1,22 +1,24 @@
 package: github.com/bmartel/rift
 import:
-- package: github.com/satori/go.uuid
-  version: ^1.1.0
-- package: github.com/onsi/gomega
-- package: google.golang.org/grpc
-- package: github.com/golang/protobuf
-  subpackages:
-  - proto
-  - protoc-gen-go
-- package: golang.org/x/net
-  subpackages:
-  - context
-  - websocket
 - package: github.com/GeertJohan/go.rice
   subpackages:
   - embedded
 - package: github.com/fatih/structs
-- package: github.com/onsi/ginkgo
+  version: ~1.1.0
+- package: github.com/satori/go.uuid
   version: ~1.2.0
-- package: github.com/uber-go/zap
-  version: ~1.7.1
+- package: go.uber.org/zap
+  version: ~1.9.1
+- package: golang.org/x/net
+  subpackages:
+  - websocket
+- package: google.golang.org/grpc
+  version: ~1.17.0
+  subpackages:
+  - credentials
+  - grpclog
+testImport:
+- package: github.com/onsi/ginkgo
+  version: ~1.7.0
+- package: github.com/onsi/gomega
+  version: ~1.4.3

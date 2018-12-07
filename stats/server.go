@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"sync"
 
-	"golang.org/x/net/context"
+	"context"
 	"golang.org/x/net/websocket"
 
 	rice "github.com/GeertJohan/go.rice"
